@@ -1,0 +1,10 @@
+Flask
+Flask-Mail
+Flask-SQLAlchemy
+Werkzeug
+python-dotenv
+pdfkit
+crewai
+openai
+requests
+python-docx
