@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mail import Mail, Message
 import os
+import json
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -27,7 +28,30 @@ mail = Mail(app)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 JD = "We are looking for a Python developer ."
-candidate_states = {}
+
+# File to store candidate states persistently
+CANDIDATE_STATES_FILE = 'candidate_states.json'
+
+def load_candidate_states():
+    """Load candidate states from file"""
+    try:
+        if os.path.exists(CANDIDATE_STATES_FILE):
+            with open(CANDIDATE_STATES_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading candidate states: {e}")
+    return {}
+
+def save_candidate_states(states):
+    """Save candidate states to file"""
+    try:
+        with open(CANDIDATE_STATES_FILE, 'w') as f:
+            json.dump(states, f, indent=2)
+    except Exception as e:
+        print(f"Error saving candidate states: {e}")
+
+# Load existing states
+candidate_states = load_candidate_states()
 
 def generate_offer_letter_html(candidate_name, candidate_email):
     """
@@ -299,6 +323,7 @@ def candidate_form():
                 'resume_text': resume_text,
                 'skills': skills
             }
+            save_candidate_states(candidate_states)
             coding_link = url_for('coding_test', token=token, _external=True)
             send_email(
                 subject='Coding Assessment Link',
@@ -322,7 +347,9 @@ def candidate_form():
 def coding_test(token):
     state = candidate_states.get(token)
     if not state:
-        return "Invalid or expired coding test link."
+        return render_template('error.html', 
+                             message="Invalid or expired coding test link.",
+                             suggestion="Please check your email for the correct link or contact support.")
     
     # Ensure question and expected_output exist
     question = state.get('question')
@@ -351,6 +378,7 @@ def coding_test(token):
         state['question'] = question
         state['expected_output'] = expected_output
         candidate_states[token] = state
+        save_candidate_states(candidate_states)
     
     if request.method == 'POST':
         code = request.form['code']
@@ -369,6 +397,7 @@ def coding_test(token):
         # Store analysis results in state
         state['coding_analysis'] = analysis_result
         candidate_states[token] = state
+        save_candidate_states(candidate_states)
         
         if analysis_result['recommendation'] == 'PASS':
             tech_link = url_for('tech_interview', token=token, _external=True)
@@ -401,7 +430,9 @@ def coding_test(token):
 def tech_interview(token):
     state = candidate_states.get(token)
     if not state:
-        return "Invalid or expired link."
+        return render_template('error.html', 
+                             message="Invalid or expired technical interview link.",
+                             suggestion="Please check your email for the correct link or contact support.")
 
     if 'tech_question' not in state:
         resume_text = state.get('resume_text', '')
@@ -413,6 +444,7 @@ def tech_interview(token):
         question = response.choices[0].message.content.strip()
         state['tech_question'] = question
         candidate_states[token] = state
+        save_candidate_states(candidate_states)
     else:
         question = state['tech_question']
 
@@ -428,6 +460,7 @@ def tech_interview(token):
         # Store analysis results in state
         state['tech_analysis'] = analysis_result
         candidate_states[token] = state
+        save_candidate_states(candidate_states)
         
         if analysis_result['recommendation'] == 'PASS':
             hr_link = url_for('hr_interview', token=token, _external=True)
@@ -461,12 +494,16 @@ def view_offer_letter(token):
     """View offer letter in browser"""
     state = candidate_states.get(token)
     if not state:
-        return "Invalid or expired link."
+        return render_template('error.html', 
+                             message="Invalid or expired offer letter link.",
+                             suggestion="Please check your email for the correct link or contact support.")
     
     # Check if candidate passed HR interview
     hr_analysis = state.get('hr_analysis')
     if not hr_analysis or hr_analysis.get('recommendation') != 'PASS':
-        return "Offer letter not available. You need to pass the HR interview first."
+        return render_template('error.html', 
+                             message="Offer letter not available.",
+                             suggestion="You need to pass the HR interview first to view the offer letter.")
     
     name = state.get('name', 'Candidate')
     email = state.get('email', 'candidate@example.com')
@@ -478,7 +515,9 @@ def view_offer_letter(token):
 def hr_interview(token):
     state = candidate_states.get(token)
     if not state:
-        return "Invalid or expired link."
+        return render_template('error.html', 
+                             message="Invalid or expired HR interview link.",
+                             suggestion="Please check your email for the correct link or contact support.")
 
     if 'hr_question' not in state:
         prompt = "Generate a basic HR interview question for a job candidate."
@@ -489,6 +528,7 @@ def hr_interview(token):
         question = response.choices[0].message.content.strip()
         state['hr_question'] = question
         candidate_states[token] = state
+        save_candidate_states(candidate_states)
     else:
         question = state['hr_question']
 
@@ -504,6 +544,7 @@ def hr_interview(token):
         # Store analysis results in state
         state['hr_analysis'] = analysis_result
         candidate_states[token] = state
+        save_candidate_states(candidate_states)
         
         if analysis_result['recommendation'] == 'PASS':
             try:
@@ -549,6 +590,16 @@ def hr_interview(token):
                                 feedback=analysis_result['feedback'])
     
     return render_template('hr_interview.html', question=question)
+
+@app.route('/test-terminated')
+def test_terminated():
+    """Handle test termination due to violations"""
+    return render_template('test_terminated.html')
+
+@app.route('/')
+def index():
+    """Redirect to the application form"""
+    return redirect(url_for('candidate_form'))
 
 if __name__ == '__main__':
     # Get port from environment variable (Render sets PORT)

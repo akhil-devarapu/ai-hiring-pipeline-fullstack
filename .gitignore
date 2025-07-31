@@ -75,3 +75,6 @@ logs/
 *.temp
 temp/
 tmp/
+
+# Candidate states (contains sensitive data)
+candidate_states.json

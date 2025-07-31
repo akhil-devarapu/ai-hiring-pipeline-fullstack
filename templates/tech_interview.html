@@ -3,60 +3,392 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technical Interview</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>Technical Interview - AI Hiring Pipeline</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .test-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 20px auto;
+            max-width: 1000px;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 30px;
+        }
+        .question-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .answer-section {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .answer-textarea {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 200px;
+            resize: vertical;
+        }
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .camera-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            border: 3px solid #28a745;
+            border-radius: 10px;
+            overflow: hidden;
+            z-index: 1000;
+            background: #000;
+        }
+        .camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .warning-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #dc3545;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            z-index: 2000;
+            display: none;
+        }
+        .timer {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            z-index: 1000;
+        }
+        .face-detection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        .face-not-detected {
+            border-color: #dc3545 !important;
+        }
+        .fullscreen-warning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #dc3545;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 3000;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-<div class="container mt-5">
-    <div class="card p-4 shadow-sm">
-        <div class="text-center mb-4">
-            <h3 class="mb-3">💻 Technical Interview</h3>
-            <div class="alert alert-info">
-                <h6>📋 Instructions:</h6>
-                <ul class="mb-0 text-start">
-                    <li>Provide detailed, accurate, and well-explained technical answers</li>
-                    <li>Your answer will be evaluated on accuracy, completeness, depth of knowledge, and clarity</li>
-                    <li>You need to score 80% or higher to pass this round</li>
-                    <li>Be thorough in your explanation and provide practical examples</li>
-                    <li>Structure your response clearly and professionally</li>
-                </ul>
-            </div>
-        </div>
+    <!-- Warning Banner -->
+    <div id="warningBanner" class="warning-banner">
+        <strong>⚠️ WARNING:</strong> Tab switching detected! Return to the test immediately or face termination.
+    </div>
 
-        <div class="mb-4">
-            <h5><strong>Technical Question:</strong></h5>
-            <div class="card bg-light">
-                <div class="card-body">
-                    <p class="mb-0">{{ question }}</p>
+    <!-- Fullscreen Warning -->
+    <div id="fullscreenWarning" class="fullscreen-warning">
+        <h4>⚠️ Fullscreen Required</h4>
+        <p>Please enter fullscreen mode to continue the test.</p>
+        <button onclick="enterFullscreen()" class="btn btn-light">Enter Fullscreen</button>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer">
+        <span id="timer">Time: 00:00</span>
+    </div>
+
+    <!-- Camera Container -->
+    <div class="camera-container">
+        <video id="cameraFeed" class="camera-feed" autoplay muted></video>
+        <canvas id="faceCanvas" class="face-detection-overlay"></canvas>
+    </div>
+
+    <div class="test-container">
+        <div class="header">
+            <h1>🔬 Technical Interview</h1>
+            <p class="mb-0">Answer the technical question below. Your session is being monitored for integrity.</p>
+        </div>
+        
+        <div class="content">
+            <div class="question-section">
+                <h4>📝 Question:</h4>
+                <p>{{ question }}</p>
+                <div class="alert alert-info">
+                    <strong>⚠️ Important:</strong> 
+                    <ul class="mb-0 mt-2">
+                        <li>Do not switch tabs or windows</li>
+                        <li>Keep your face visible in the camera</li>
+                        <li>Stay in fullscreen mode</li>
+                        <li>Any violation will terminate the test</li>
+                    </ul>
                 </div>
             </div>
+
+            <form method="POST">
+                <div class="answer-section">
+                    <label for="answer" class="form-label">Your Answer:</label>
+                    <textarea name="answer" id="answer" class="form-control answer-textarea" rows="10" 
+                              placeholder="Provide a detailed technical answer here..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-submit">Submit Answer</button>
+            </form>
         </div>
-
-        <form method="POST">
-            <div class="mb-3">
-                <label for="answer" class="form-label"><strong>Your Answer:</strong></label>
-                <textarea class="form-control" id="answer" name="answer" rows="12" required 
-                          placeholder="Write your detailed technical answer here...&#10;&#10;Tips:&#10;- Provide comprehensive explanations&#10;- Include practical examples&#10;- Structure your response clearly&#10;- Demonstrate your technical knowledge"></textarea>
-            </div>
-
-            <div class="alert alert-warning">
-                <h6>⚠️ Evaluation Criteria:</h6>
-                <ul class="mb-0">
-                    <li><strong>Accuracy:</strong> Is the technical information correct?</li>
-                    <li><strong>Completeness:</strong> Does the answer cover all aspects of the question?</li>
-                    <li><strong>Depth of Knowledge:</strong> Does the candidate demonstrate deep understanding?</li>
-                    <li><strong>Clarity:</strong> Is the explanation clear and well-structured?</li>
-                    <li><strong>Practical Application:</strong> Does the candidate show practical understanding?</li>
-                </ul>
-            </div>
-
-            <div class="text-center">
-                <button type="submit" class="btn btn-success btn-lg">
-                    📝 Submit Answer
-                </button>
-            </div>
-        </form>
     </div>
-</div>
+
+    <script>
+        let startTime = Date.now();
+        let tabSwitchCount = 0;
+        let faceDetectionInterval;
+        let isFullscreen = false;
+        let testTerminated = false;
+
+        // Initialize camera and face detection
+        async function initializeCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 200, 
+                        height: 150,
+                        facingMode: 'user'
+                    } 
+                });
+                const video = document.getElementById('cameraFeed');
+                video.srcObject = stream;
+                
+                // Start face detection
+                startFaceDetection();
+            } catch (error) {
+                console.error('Camera access denied:', error);
+                terminateTest('Camera access required for test integrity');
+            }
+        }
+
+        // Face detection using canvas
+        function startFaceDetection() {
+            const video = document.getElementById('cameraFeed');
+            const canvas = document.getElementById('faceCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = 200;
+            canvas.height = 150;
+            
+            faceDetectionInterval = setInterval(() => {
+                if (testTerminated) return;
+                
+                ctx.drawImage(video, 0, 0, 200, 150);
+                const imageData = ctx.getImageData(0, 0, 200, 150);
+                
+                // Simple face detection (check for skin tone pixels)
+                let skinPixels = 0;
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    
+                    // Basic skin tone detection
+                    if (r > 100 && g > 50 && b > 50 && r > g && r > b) {
+                        skinPixels++;
+                    }
+                }
+                
+                const faceDetected = skinPixels > 1000; // Threshold
+                canvas.classList.toggle('face-not-detected', !faceDetected);
+                
+                if (!faceDetected) {
+                    tabSwitchCount++;
+                    if (tabSwitchCount > 5) {
+                        terminateTest('Face not detected for extended period');
+                    }
+                } else {
+                    tabSwitchCount = Math.max(0, tabSwitchCount - 1);
+                }
+            }, 1000);
+        }
+
+        // Tab switching detection
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                tabSwitchCount++;
+                showWarning('Tab switching detected! Return immediately.');
+                
+                if (tabSwitchCount > 3) {
+                    terminateTest('Multiple tab switches detected');
+                }
+            }
+        });
+
+        // Window focus detection
+        window.addEventListener('blur', function() {
+            tabSwitchCount++;
+            showWarning('Window focus lost! Return to test.');
+            
+            if (tabSwitchCount > 3) {
+                terminateTest('Multiple window focus losses detected');
+            }
+        });
+
+        // Fullscreen detection
+        document.addEventListener('fullscreenchange', function() {
+            isFullscreen = !!document.fullscreenElement;
+            if (!isFullscreen) {
+                showFullscreenWarning();
+            }
+        });
+
+        // Keyboard shortcuts prevention
+        document.addEventListener('keydown', function(e) {
+            // Prevent common shortcuts
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'w' || e.key === 'n' || e.key === 't' || e.key === 'r') {
+                    e.preventDefault();
+                    showWarning('Keyboard shortcuts are disabled during the test');
+                }
+            }
+            
+            // Prevent F11 and other function keys
+            if (e.key === 'F11' || e.key === 'F5') {
+                e.preventDefault();
+                showWarning('Function keys are disabled during the test');
+            }
+        });
+
+        // Right-click prevention
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            showWarning('Right-click is disabled during the test');
+        });
+
+        // Timer
+        function updateTimer() {
+            if (testTerminated) return;
+            
+            const elapsed = Date.now() - startTime;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            
+            document.getElementById('timer').textContent = 
+                `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Warning system
+        function showWarning(message) {
+            const banner = document.getElementById('warningBanner');
+            banner.textContent = `⚠️ WARNING: ${message}`;
+            banner.style.display = 'block';
+            
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 5000);
+        }
+
+        function showFullscreenWarning() {
+            document.getElementById('fullscreenWarning').style.display = 'block';
+        }
+
+        function enterFullscreen() {
+            document.documentElement.requestFullscreen().then(() => {
+                document.getElementById('fullscreenWarning').style.display = 'none';
+            }).catch(err => {
+                console.error('Fullscreen failed:', err);
+            });
+        }
+
+        // Test termination
+        function terminateTest(reason) {
+            testTerminated = true;
+            clearInterval(faceDetectionInterval);
+            
+            // Stop camera
+            const video = document.getElementById('cameraFeed');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            
+            // Show termination message
+            alert(`Test terminated: ${reason}`);
+            
+            // Redirect to error page
+            window.location.href = '/test-terminated';
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCamera();
+            setInterval(updateTimer, 1000);
+            
+            // Request fullscreen on start
+            setTimeout(() => {
+                if (!document.fullscreenElement) {
+                    showFullscreenWarning();
+                }
+            }, 2000);
+        });
+
+        // Form submission with integrity check
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (testTerminated) {
+                e.preventDefault();
+                alert('Test has been terminated due to violations');
+                return;
+            }
+            
+            if (tabSwitchCount > 0) {
+                if (!confirm('You have violated test rules. Are you sure you want to submit?')) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+        });
+    </script>
 </body>
 </html> 
