@@ -9,7 +9,7 @@ from utils.email_utils import send_email
 from utils.judge0_utils import submit_code, get_result
 import uuid
 import tempfile
-from openai import OpenAI
+import openai
 from datetime import datetime
 
 app = Flask(__name__)
@@ -24,7 +24,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 mail = Mail(app)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 JD = "We are looking for a Python developer ."
 candidate_states = {}
@@ -124,8 +124,8 @@ def analyze_coding_solution(question, code, output, language):
     Recommendation: [PASS/FAIL]
     """
     
-    response = client.chat.completions.create(
-        model="gpt-4o",
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
     
@@ -182,8 +182,8 @@ def analyze_technical_answer(question, answer):
     Recommendation: [PASS/FAIL]
     """
     
-    response = client.chat.completions.create(
-        model="gpt-4o",
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
     
@@ -240,8 +240,8 @@ def analyze_hr_answer(question, answer):
     Recommendation: [PASS/FAIL]
     """
     
-    response = client.chat.completions.create(
-        model="gpt-4o",
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
     
@@ -284,9 +284,9 @@ def candidate_form():
         resume_text = parse_resume(resume_path)
         # Use OpenAI to compare resume+skills to JD
         prompt = f"Job Description: {JD}\n\nCandidate Resume: {resume_text}\n\nCandidate Skills: {skills}\n\nDoes this candidate match the job description? Reply Yes or No and explain."
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
         match_result = response.choices[0].message.content.strip()
@@ -335,9 +335,9 @@ def coding_test(token):
             f"Format: Question: ...\nExpected Output: ...\n"
             f"Randomizer: {unique_id}"
         )
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
         content = response.choices[0].message.content.strip()
@@ -406,8 +406,8 @@ def tech_interview(token):
     if 'tech_question' not in state:
         resume_text = state.get('resume_text', '')
         prompt = f"Job Description: {JD}\n\nCandidate Resume: {resume_text}\n\nGenerate a technical interview question for this candidate."
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
         question = response.choices[0].message.content.strip()
@@ -482,8 +482,8 @@ def hr_interview(token):
 
     if 'hr_question' not in state:
         prompt = "Generate a basic HR interview question for a job candidate."
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
         question = response.choices[0].message.content.strip()
