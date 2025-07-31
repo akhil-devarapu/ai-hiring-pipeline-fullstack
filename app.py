@@ -36,22 +36,56 @@ def load_candidate_states():
     """Load candidate states from file"""
     try:
         if os.path.exists(CANDIDATE_STATES_FILE):
-            with open(CANDIDATE_STATES_FILE, 'r') as f:
-                return json.load(f)
+            with open(CANDIDATE_STATES_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                print(f"Loaded {len(data)} candidate states from file")
+                return data
     except Exception as e:
         print(f"Error loading candidate states: {e}")
+        # If file is corrupted, try to backup and start fresh
+        try:
+            if os.path.exists(CANDIDATE_STATES_FILE):
+                backup_file = f"{CANDIDATE_STATES_FILE}.backup"
+                os.rename(CANDIDATE_STATES_FILE, backup_file)
+                print(f"Backed up corrupted file to {backup_file}")
+        except:
+            pass
     return {}
 
 def save_candidate_states(states):
     """Save candidate states to file"""
     try:
-        with open(CANDIDATE_STATES_FILE, 'w') as f:
-            json.dump(states, f, indent=2)
+        # Create backup before saving
+        if os.path.exists(CANDIDATE_STATES_FILE):
+            backup_file = f"{CANDIDATE_STATES_FILE}.backup"
+            os.rename(CANDIDATE_STATES_FILE, backup_file)
+        
+        with open(CANDIDATE_STATES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(states, f, indent=2, ensure_ascii=False)
+        print(f"Saved {len(states)} candidate states to file")
     except Exception as e:
         print(f"Error saving candidate states: {e}")
+        # Try to restore from backup
+        try:
+            backup_file = f"{CANDIDATE_STATES_FILE}.backup"
+            if os.path.exists(backup_file):
+                os.rename(backup_file, CANDIDATE_STATES_FILE)
+                print("Restored from backup file")
+        except:
+            pass
 
 # Load existing states
 candidate_states = load_candidate_states()
+
+# Add a simple in-memory fallback for development
+if not candidate_states:
+    print("No candidate states loaded from file, starting with empty state")
+    candidate_states = {}
+
+# Ensure the file exists with empty state if it doesn't exist
+if not os.path.exists(CANDIDATE_STATES_FILE):
+    print(f"Creating new candidate states file: {CANDIDATE_STATES_FILE}")
+    save_candidate_states(candidate_states)
 
 def generate_offer_letter_html(candidate_name, candidate_email):
     """
@@ -345,11 +379,17 @@ def candidate_form():
 
 @app.route('/coding-test/<token>', methods=['GET', 'POST'])
 def coding_test(token):
+    print(f"Accessing coding test with token: {token}")
+    print(f"Available tokens: {list(candidate_states.keys())}")
+    
     state = candidate_states.get(token)
     if not state:
+        print(f"Token {token} not found in candidate states")
         return render_template('error.html', 
                              message="Invalid or expired coding test link.",
                              suggestion="Please check your email for the correct link or contact support.")
+    
+    print(f"Found state for token {token}: {state.get('name', 'Unknown')}")
     
     # Ensure question and expected_output exist
     question = state.get('question')
@@ -428,11 +468,17 @@ def coding_test(token):
 
 @app.route('/tech-interview/<token>', methods=['GET', 'POST'])
 def tech_interview(token):
+    print(f"Accessing tech interview with token: {token}")
+    print(f"Available tokens: {list(candidate_states.keys())}")
+    
     state = candidate_states.get(token)
     if not state:
+        print(f"Token {token} not found in candidate states")
         return render_template('error.html', 
                              message="Invalid or expired technical interview link.",
                              suggestion="Please check your email for the correct link or contact support.")
+    
+    print(f"Found state for token {token}: {state.get('name', 'Unknown')}")
 
     if 'tech_question' not in state:
         resume_text = state.get('resume_text', '')
@@ -513,11 +559,17 @@ def view_offer_letter(token):
 
 @app.route('/hr-interview/<token>', methods=['GET', 'POST'])
 def hr_interview(token):
+    print(f"Accessing HR interview with token: {token}")
+    print(f"Available tokens: {list(candidate_states.keys())}")
+    
     state = candidate_states.get(token)
     if not state:
+        print(f"Token {token} not found in candidate states")
         return render_template('error.html', 
                              message="Invalid or expired HR interview link.",
                              suggestion="Please check your email for the correct link or contact support.")
+    
+    print(f"Found state for token {token}: {state.get('name', 'Unknown')}")
 
     if 'hr_question' not in state:
         prompt = "Generate a basic HR interview question for a job candidate."
@@ -596,12 +648,28 @@ def test_terminated():
     """Handle test termination due to violations"""
     return render_template('test_terminated.html')
 
+@app.route('/debug/states')
+def debug_states():
+    """Debug endpoint to check candidate states"""
+    return {
+        'total_states': len(candidate_states),
+        'tokens': list(candidate_states.keys()),
+        'states': {k: {'name': v.get('name', 'Unknown'), 'email': v.get('email', 'Unknown')} 
+                  for k, v in candidate_states.items()}
+    }
+
 @app.route('/')
 def index():
     """Redirect to the application form"""
     return redirect(url_for('candidate_form'))
 
 if __name__ == '__main__':
+    # Get port from environment variable (Render sets PORT)
+    port = int(os.environ.get('PORT', 5000))
+    
+    # Run the app with proper host binding for production
+    app.run(host='0.0.0.0', port=port, debug=False)
+
     # Get port from environment variable (Render sets PORT)
     port = int(os.environ.get('PORT', 5000))
     
