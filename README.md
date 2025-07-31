@@ -87,6 +87,7 @@ python app.py
    - `MAIL_USERNAME`: Your email address
    - `MAIL_PASSWORD`: Your email password or app password
    - `SECRET_KEY`: A random secret key (Render can generate this)
+   - `RAPIDAPI_KEY`: Your RapidAPI key for Judge0 (optional - system works without it)
    - `MAIL_SERVER`: `smtp.gmail.com`
    - `MAIL_PORT`: `587`
    - `MAIL_USE_TLS`: `true`
@@ -130,9 +131,12 @@ vercel
 | `MAIL_USERNAME` | Email for sending notifications | Yes |
 | `MAIL_PASSWORD` | Email password or app password | Yes |
 | `SECRET_KEY` | Flask secret key | Yes |
+| `RAPIDAPI_KEY` | RapidAPI key for Judge0 code execution (optional) | No |
 | `MAIL_SERVER` | SMTP server (default: smtp.gmail.com) | No |
 | `MAIL_PORT` | SMTP port (default: 587) | No |
 | `MAIL_USE_TLS` | Use TLS (default: true) | No |
+
+**Note**: If `RAPIDAPI_KEY` is not provided, the system will use mock code execution for testing purposes.
 
 ## Templates
 
@@ -193,6 +197,9 @@ ai_hiring_pipeline/
 2. **OpenAI API errors**: Verify your API key and ensure you have sufficient credits
 3. **Port issues**: The app automatically uses the PORT environment variable set by Render
 4. **Build failures**: Ensure all dependencies are listed in requirements.txt
+5. **Missing requests module**: The requirements.txt includes all necessary dependencies
+6. **Judge0 API errors**: The system works without RapidAPI key (uses mock execution)
+7. **Import errors**: Make sure all utils files are present in the utils/ directory
 
 ### Support
 
