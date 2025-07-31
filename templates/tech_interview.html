@@ -9,14 +9,52 @@
 <body>
 <div class="container mt-5">
     <div class="card p-4 shadow-sm">
-        <h3 class="mb-3">Technical Interview</h3>
-        <p><strong>Question:</strong> {{ question }}</p>
+        <div class="text-center mb-4">
+            <h3 class="mb-3">💻 Technical Interview</h3>
+            <div class="alert alert-info">
+                <h6>📋 Instructions:</h6>
+                <ul class="mb-0 text-start">
+                    <li>Provide detailed, accurate, and well-explained technical answers</li>
+                    <li>Your answer will be evaluated on accuracy, completeness, depth of knowledge, and clarity</li>
+                    <li>You need to score 80% or higher to pass this round</li>
+                    <li>Be thorough in your explanation and provide practical examples</li>
+                    <li>Structure your response clearly and professionally</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h5><strong>Technical Question:</strong></h5>
+            <div class="card bg-light">
+                <div class="card-body">
+                    <p class="mb-0">{{ question }}</p>
+                </div>
+            </div>
+        </div>
+
         <form method="POST">
             <div class="mb-3">
-                <label for="answer" class="form-label">Your Answer</label>
-                <textarea class="form-control" id="answer" name="answer" rows="8" required></textarea>
+                <label for="answer" class="form-label"><strong>Your Answer:</strong></label>
+                <textarea class="form-control" id="answer" name="answer" rows="12" required 
+                          placeholder="Write your detailed technical answer here...&#10;&#10;Tips:&#10;- Provide comprehensive explanations&#10;- Include practical examples&#10;- Structure your response clearly&#10;- Demonstrate your technical knowledge"></textarea>
             </div>
-            <button type="submit" class="btn btn-success">Submit</button>
+
+            <div class="alert alert-warning">
+                <h6>⚠️ Evaluation Criteria:</h6>
+                <ul class="mb-0">
+                    <li><strong>Accuracy:</strong> Is the technical information correct?</li>
+                    <li><strong>Completeness:</strong> Does the answer cover all aspects of the question?</li>
+                    <li><strong>Depth of Knowledge:</strong> Does the candidate demonstrate deep understanding?</li>
+                    <li><strong>Clarity:</strong> Is the explanation clear and well-structured?</li>
+                    <li><strong>Practical Application:</strong> Does the candidate show practical understanding?</li>
+                </ul>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-success btn-lg">
+                    📝 Submit Answer
+                </button>
+            </div>
         </form>
     </div>
 </div>

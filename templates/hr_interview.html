@@ -9,14 +9,52 @@
 <body>
 <div class="container mt-5">
     <div class="card p-4 shadow-sm">
-        <h3 class="mb-3">HR Interview</h3>
-        <p><strong>Question:</strong> {{ question }}</p>
+        <div class="text-center mb-4">
+            <h3 class="mb-3">👥 HR Interview</h3>
+            <div class="alert alert-info">
+                <h6>📋 Instructions:</h6>
+                <ul class="mb-0 text-start">
+                    <li>Provide professional, honest, and well-structured answers</li>
+                    <li>Your answer will be evaluated on relevance, professionalism, clarity, and cultural fit</li>
+                    <li>You need to score 80% or higher to pass this final round</li>
+                    <li>Be authentic and demonstrate your values and work ethic</li>
+                    <li>Structure your response clearly and professionally</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h5><strong>HR Question:</strong></h5>
+            <div class="card bg-light">
+                <div class="card-body">
+                    <p class="mb-0">{{ question }}</p>
+                </div>
+            </div>
+        </div>
+
         <form method="POST">
             <div class="mb-3">
-                <label for="answer" class="form-label">Your Answer</label>
-                <textarea class="form-control" id="answer" name="answer" rows="8" required></textarea>
+                <label for="answer" class="form-label"><strong>Your Answer:</strong></label>
+                <textarea class="form-control" id="answer" name="answer" rows="10" required 
+                          placeholder="Write your professional answer here...&#10;&#10;Tips:&#10;- Be honest and authentic&#10;- Provide specific examples&#10;- Show your values and work ethic&#10;- Structure your response professionally"></textarea>
             </div>
-            <button type="submit" class="btn btn-success">Submit</button>
+
+            <div class="alert alert-warning">
+                <h6>⚠️ Evaluation Criteria:</h6>
+                <ul class="mb-0">
+                    <li><strong>Relevance:</strong> Does the answer directly address the question?</li>
+                    <li><strong>Professionalism:</strong> Is the response professional and appropriate?</li>
+                    <li><strong>Clarity:</strong> Is the explanation clear and well-structured?</li>
+                    <li><strong>Honesty:</strong> Does the candidate appear genuine and honest?</li>
+                    <li><strong>Cultural Fit:</strong> Does the answer align with workplace values?</li>
+                </ul>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-success btn-lg">
+                    📝 Submit Answer
+                </button>
+            </div>
         </form>
     </div>
 </div>

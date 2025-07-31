@@ -9,11 +9,32 @@
 <body>
 <div class="container mt-5">
     <div class="card p-4 shadow-sm">
-        <h3 class="mb-3">Coding Test</h3>
-        <p><strong>Question:</strong> {{ question }}</p>
+        <div class="text-center mb-4">
+            <h3 class="mb-3">🧪 Coding Assessment</h3>
+            <div class="alert alert-info">
+                <h6>📋 Instructions:</h6>
+                <ul class="mb-0 text-start">
+                    <li>Write clean, efficient, and well-documented code</li>
+                    <li>Your solution will be evaluated on correctness, code quality, efficiency, and best practices</li>
+                    <li>You need to score 80% or higher to pass this round</li>
+                    <li>Use the input "2 3" to test your solution</li>
+                    <li>Make sure your code handles edge cases properly</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h5><strong>Question:</strong></h5>
+            <div class="card bg-light">
+                <div class="card-body">
+                    <p class="mb-0">{{ question }}</p>
+                </div>
+            </div>
+        </div>
+
         <form method="POST">
             <div class="mb-3">
-                <label for="language" class="form-label">Language</label>
+                <label for="language" class="form-label"><strong>Programming Language:</strong></label>
                 <select class="form-select" id="language" name="language" required>
                     <option value="python">Python</option>
                     <option value="cpp">C++</option>
@@ -28,11 +49,28 @@
                     <option value="rust">Rust</option>
                 </select>
             </div>
+            
             <div class="mb-3">
-                <label for="code" class="form-label">Your Code</label>
-                <textarea class="form-control" id="code" name="code" rows="10" required></textarea>
+                <label for="code" class="form-label"><strong>Your Solution:</strong></label>
+                <textarea class="form-control" id="code" name="code" rows="15" required 
+                          placeholder="Write your code here...&#10;&#10;Example (Python):&#10;def solve_problem(a, b):&#10;    return a + b&#10;&#10;# Read input&#10;a, b = map(int, input().split())&#10;result = solve_problem(a, b)&#10;print(result)"></textarea>
             </div>
-            <button type="submit" class="btn btn-success">Submit</button>
+
+            <div class="alert alert-warning">
+                <h6>⚠️ Important Notes:</h6>
+                <ul class="mb-0">
+                    <li>Your code will be analyzed by AI for correctness, quality, and best practices</li>
+                    <li>Focus on writing clean, readable, and efficient code</li>
+                    <li>Include proper comments and documentation</li>
+                    <li>Handle edge cases and error conditions</li>
+                </ul>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-success btn-lg">
+                    🚀 Submit Solution
+                </button>
+            </div>
         </form>
     </div>
 </div>
