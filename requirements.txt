@@ -9,3 +9,7 @@ python-docx==0.8.11
 crewai==0.152.0
 langchain==0.1.0
 langsmith==0.0.79
+tiktoken==0.5.1
+pdf2image
+pytesseract
+pillow
