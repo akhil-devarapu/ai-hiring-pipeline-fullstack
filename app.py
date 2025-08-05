@@ -74,6 +74,36 @@ def save_candidate_states(states):
         except:
             pass
 
+def check_and_mark_link_used(token, link_type):
+    """
+    Check if a link has been used and mark it as used if not.
+    Returns (is_valid, is_first_visit)
+    """
+    state = candidate_states.get(token)
+    if not state:
+        return False, False
+    
+    # Handle legacy data - if usage tracking doesn't exist, initialize it
+    if f'{link_type}_used' not in state:
+        state[f'{link_type}_used'] = False
+        state['tech_interview_used'] = state.get('tech_interview_used', False)
+        state['hr_interview_used'] = state.get('hr_interview_used', False)
+        candidate_states[token] = state
+        save_candidate_states(candidate_states)
+    
+    # Check if this specific link type has been used
+    used_key = f'{link_type}_used'
+    if state.get(used_key, False):
+        return True, False  # Link exists but has been used
+    
+    # Mark as used
+    state[used_key] = True
+    state[f'{link_type}_used_at'] = datetime.now().isoformat()
+    candidate_states[token] = state
+    save_candidate_states(candidate_states)
+    
+    return True, True  # Link exists and this is first visit
+
 # Load existing states
 candidate_states = load_candidate_states()
 
@@ -355,7 +385,11 @@ def candidate_form():
                 'name': name,
                 'email': email,
                 'resume_text': resume_text,
-                'skills': skills
+                'skills': skills,
+                # Initialize usage tracking for single-use links
+                'coding_test_used': False,
+                'tech_interview_used': False,
+                'hr_interview_used': False
             }
             save_candidate_states(candidate_states)
             coding_link = url_for('coding_test', token=token, _external=True)
@@ -382,13 +416,22 @@ def coding_test(token):
     print(f"Accessing coding test with token: {token}")
     print(f"Available tokens: {list(candidate_states.keys())}")
     
-    state = candidate_states.get(token)
-    if not state:
+    # Check if link is valid and mark as used
+    is_valid, is_first_visit = check_and_mark_link_used(token, 'coding_test')
+    
+    if not is_valid:
         print(f"Token {token} not found in candidate states")
         return render_template('error.html', 
                              message="Invalid or expired coding test link.",
                              suggestion="Please check your email for the correct link or contact support.")
     
+    if not is_first_visit:
+        print(f"Token {token} has already been used for coding test")
+        return render_template('error.html', 
+                             message="This coding test link has already been used.",
+                             suggestion="Each test link can only be used once. Please contact support if you need assistance.")
+    
+    state = candidate_states.get(token)
     print(f"Found state for token {token}: {state.get('name', 'Unknown')}")
     
     # Ensure question and expected_output exist
@@ -471,13 +514,22 @@ def tech_interview(token):
     print(f"Accessing tech interview with token: {token}")
     print(f"Available tokens: {list(candidate_states.keys())}")
     
-    state = candidate_states.get(token)
-    if not state:
+    # Check if link is valid and mark as used
+    is_valid, is_first_visit = check_and_mark_link_used(token, 'tech_interview')
+    
+    if not is_valid:
         print(f"Token {token} not found in candidate states")
         return render_template('error.html', 
                              message="Invalid or expired technical interview link.",
                              suggestion="Please check your email for the correct link or contact support.")
     
+    if not is_first_visit:
+        print(f"Token {token} has already been used for tech interview")
+        return render_template('error.html', 
+                             message="This technical interview link has already been used.",
+                             suggestion="Each interview link can only be used once. Please contact support if you need assistance.")
+    
+    state = candidate_states.get(token)
     print(f"Found state for token {token}: {state.get('name', 'Unknown')}")
 
     if 'tech_question' not in state:
@@ -562,13 +614,22 @@ def hr_interview(token):
     print(f"Accessing HR interview with token: {token}")
     print(f"Available tokens: {list(candidate_states.keys())}")
     
-    state = candidate_states.get(token)
-    if not state:
+    # Check if link is valid and mark as used
+    is_valid, is_first_visit = check_and_mark_link_used(token, 'hr_interview')
+    
+    if not is_valid:
         print(f"Token {token} not found in candidate states")
         return render_template('error.html', 
                              message="Invalid or expired HR interview link.",
                              suggestion="Please check your email for the correct link or contact support.")
     
+    if not is_first_visit:
+        print(f"Token {token} has already been used for HR interview")
+        return render_template('error.html', 
+                             message="This HR interview link has already been used.",
+                             suggestion="Each interview link can only be used once. Please contact support if you need assistance.")
+    
+    state = candidate_states.get(token)
     print(f"Found state for token {token}: {state.get('name', 'Unknown')}")
 
     if 'hr_question' not in state:
@@ -654,8 +715,13 @@ def debug_states():
     return {
         'total_states': len(candidate_states),
         'tokens': list(candidate_states.keys()),
-        'states': {k: {'name': v.get('name', 'Unknown'), 'email': v.get('email', 'Unknown')} 
-                  for k, v in candidate_states.items()}
+        'states': {k: {
+            'name': v.get('name', 'Unknown'), 
+            'email': v.get('email', 'Unknown'),
+            'coding_test_used': v.get('coding_test_used', False),
+            'tech_interview_used': v.get('tech_interview_used', False),
+            'hr_interview_used': v.get('hr_interview_used', False)
+        } for k, v in candidate_states.items()}
     }
 
 @app.route('/')
