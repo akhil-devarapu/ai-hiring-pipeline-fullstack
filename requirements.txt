@@ -7,5 +7,5 @@ gunicorn==21.2.0
 PyPDF2==3.0.1
 python-docx==0.8.11
 crewai==0.152.0
-langchain-openai==0.1.0
 langchain==0.1.0
+langsmith==0.0.79
