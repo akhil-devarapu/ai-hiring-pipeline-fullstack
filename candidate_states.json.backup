@@ -1,1 +1,33 @@
-{}
+{
+  "a88d2964-2bf7-455d-86c7-b148624419db": {
+    "name": "Devarapu Akhil",
+    "email": "akhilchowdarydevarapu@gmail.com",
+    "resume_text": "",
+    "skills": "python ,java,sql",
+    "coding_test_used": false,
+    "tech_interview_used": false,
+    "hr_interview_used": false
+  },
+  "f2c8a8b4-51b2-460f-b4cd-148edfc56570": {
+    "name": "Devarapu Akhil",
+    "email": "akhilchowdarydevarapu@gmail.com",
+    "resume_text": " \nPRANAVI BODDU  \nEmail ID:  pranaviboddu49@gmail.com  \nMobile: 8374760957  \nLinkedIn: www.linkedin.com/in/boddu -pranavi  \n \n \nI am consistently driven to apply my knowledge to acquire valuable skills and continuously challenge myself \nto enhance my performance in alignment with the company's objectives. I am a fast learner, collaborative, \nand enjoy exploring new concepts. I am adaptable and open to working with a variety of  technologies.  \n \n● PYTHON  \n● HTML, CSS, JavaScript  \n● JAVA  \n● SQL \n \n \n2020-2024   B. TECH  in Computer Science Engineering from SPMVV University, Tirupati with 8.0 CGPA.  \n2018-2020   12th from Viswasai Coll ege, Nellore  with  9.88 CGPA . \n2017-2018   10th from Vikas High School, Sangam , with 10 CGPA.  \n● NPTEL Certification in Soft Computing  \n● NPTEL Certification in Internet of Things  \n● NARL Training Program in Python  \n \n• Advanced Radar Data Analysis using Software tool using Python . \n• E-Commerce  Website using HTML, CSS, JavaScript as Front End.  \n● SPMVV Easy Trade . \n● Completed a 30 -day internship program focused on Artificial Intelligence Using Python, organized by LOMMA IT  \nSolutions in Tirupati . \n● Successfully completed a 60 -day virtual internship program on \"Full Stack Python\", organized by APSCHE.  \n● Gardening  \n● Listening Music  \n● Cooking  \nOBJECTIVE  \nSKILLS  \nEDUCATION  \nTRAININGS OR CERTIFICATIONS  \nPROJECTS  \nINTERNSHIPS  \n      INTERESTS, HOBBIES  ",
+    "skills": "python ,java,sql",
+    "question": "Write a Python function named 'square_list' that takes a list of integers as an argument and returns a new list with the squares of the numbers. The function should not modify the original list. For example, if the input list is [1, 2, 3, 4, 5], the function should return [1, 4, 9, 16, 25].",
+    "expected_output": "The function 'square_list' should take a list of integers as input and return a new list with the squares of the numbers. For example, if the input list is [1, 2, 3, 4, 5], the function should return [1, 4, 9, 16, 25]. The function should not modify the original list.",
+    "coding_test_used": false,
+    "tech_interview_used": false,
+    "hr_interview_used": false
+  },
+  "f158f667-d886-439f-9467-bdb23b32b23a": {
+    "name": "Devarapu Akhil",
+    "email": "akhilchowdarydevarapu@gmail.com",
+    "resume_text": " \nPRANAVI BODDU  \nEmail ID:  pranaviboddu49@gmail.com  \nMobile: 8374760957  \nLinkedIn: www.linkedin.com/in/boddu -pranavi  \n \n \nI am consistently driven to apply my knowledge to acquire valuable skills and continuously challenge myself \nto enhance my performance in alignment with the company's objectives. I am a fast learner, collaborative, \nand enjoy exploring new concepts. I am adaptable and open to working with a variety of  technologies.  \n \n● PYTHON  \n● HTML, CSS, JavaScript  \n● JAVA  \n● SQL \n \n \n2020-2024   B. TECH  in Computer Science Engineering from SPMVV University, Tirupati with 8.0 CGPA.  \n2018-2020   12th from Viswasai Coll ege, Nellore  with  9.88 CGPA . \n2017-2018   10th from Vikas High School, Sangam , with 10 CGPA.  \n● NPTEL Certification in Soft Computing  \n● NPTEL Certification in Internet of Things  \n● NARL Training Program in Python  \n \n• Advanced Radar Data Analysis using Software tool using Python . \n• E-Commerce  Website using HTML, CSS, JavaScript as Front End.  \n● SPMVV Easy Trade . \n● Completed a 30 -day internship program focused on Artificial Intelligence Using Python, organized by LOMMA IT  \nSolutions in Tirupati . \n● Successfully completed a 60 -day virtual internship program on \"Full Stack Python\", organized by APSCHE.  \n● Gardening  \n● Listening Music  \n● Cooking  \nOBJECTIVE  \nSKILLS  \nEDUCATION  \nTRAININGS OR CERTIFICATIONS  \nPROJECTS  \nINTERNSHIPS  \n      INTERESTS, HOBBIES  ",
+    "skills": "python ,java,sql",
+    "question": "Write a Python function called 'count_vowels' that takes a string as input and returns the count of vowels (a, e, i, o, u) in the string. The function should be case-insensitive, meaning it should count both lower case and upper case vowels. For example, if the input string is 'Hello World', the function should return 3.",
+    "expected_output": "The function 'count_vowels' should return an integer representing the count of vowels in the input string. For example, if the input string is 'Hello World', the function should return 3 because there are 3 vowels in the string (2 'o's and 1 'e').",
+    "coding_test_used": false,
+    "tech_interview_used": false,
+    "hr_interview_used": false
+  }
+}

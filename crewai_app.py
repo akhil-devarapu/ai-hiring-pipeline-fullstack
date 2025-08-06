@@ -15,7 +15,7 @@ from datetime import datetime
 
 # CrewAI imports
 from crewai import Agent, Task, Crew, Process
-from langchain_openai import ChatOpenAI
+from langchain.chat_models import ChatOpenAI
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
@@ -58,13 +58,31 @@ def load_candidate_states():
 def save_candidate_states(states):
     """Save candidate states to file"""
     try:
+        backup_file = f"{CANDIDATE_STATES_FILE}.backup"
         if os.path.exists(CANDIDATE_STATES_FILE):
-            backup_file = f"{CANDIDATE_STATES_FILE}.backup"
-            os.rename(CANDIDATE_STATES_FILE, backup_file)
-        
+            if os.path.exists(backup_file):
+                try:
+                    os.remove(backup_file)
+                    print(f"[DEBUG] Removed old backup file: {backup_file}")
+                except Exception as e:
+                    print(f"[ERROR] Could not remove backup file: {e}")
+            try:
+                os.rename(CANDIDATE_STATES_FILE, backup_file)
+                print(f"[DEBUG] Backed up candidate states file to: {backup_file}")
+            except Exception as e:
+                print(f"[ERROR] Could not backup candidate states file: {e}")
         with open(CANDIDATE_STATES_FILE, 'w', encoding='utf-8') as f:
             json.dump(states, f, indent=2, ensure_ascii=False)
-        print(f"Saved {len(states)} candidate states to file")
+        print(f"[INFO] Saved {len(states)} candidate states to file: {CANDIDATE_STATES_FILE}")
+    except Exception as e:
+        print(f"[ERROR] Error saving candidate states: {e}")
+        try:
+            backup_file = f"{CANDIDATE_STATES_FILE}.backup"
+            if os.path.exists(backup_file):
+                os.rename(backup_file, CANDIDATE_STATES_FILE)
+                print("[INFO] Restored candidate states from backup file after save failure.")
+        except Exception as e2:
+            print(f"[ERROR] Could not restore from backup file: {e2}")
     except Exception as e:
         print(f"Error saving candidate states: {e}")
         try:
@@ -388,32 +406,29 @@ def coding_test(token):
         # Parse the result
         try:
             import re
+            print(f"[DEBUG] CrewAI raw result: {result}")
             score_match = re.search(r'"score":\s*(\d+)', result)
             score = int(score_match.group(1)) if score_match else 0
-            
             recommendation_match = re.search(r'"recommendation":\s*"(PASS|FAIL)"', result)
             recommendation = recommendation_match.group(1) if recommendation_match else "FAIL"
-            
             feedback = result  # Use full result as feedback
-        except:
+        except Exception as e:
+            print(f"[ERROR] Exception parsing CrewAI result: {e}")
             score = 0
             recommendation = "FAIL"
             feedback = result
-        
+        print(f"[DEBUG] Parsed score: {score}, recommendation: {recommendation}")
         analysis_result = {
             'score': score,
             'feedback': feedback,
             'recommendation': recommendation
         }
-        
         email = state.get('email', 'candidate@example.com')
         name = state.get('name', 'Candidate')
-        
         # Store analysis results in state
         state['coding_analysis'] = analysis_result
         candidate_states[token] = state
         save_candidate_states(candidate_states)
-        
         print(f"[INFO] Coding test submitted for token {token}. Score: {analysis_result['score']}, Recommendation: {analysis_result['recommendation']}")
         if analysis_result['recommendation'] == 'PASS':
             tech_link = url_for('tech_interview', token=token, _external=True)
