@@ -1,10 +1,9 @@
-
-
-
 flask==2.3.3
 flask-mail==0.9.1
 python-dotenv==1.0.0
-openai>=1.13.3
+openai==0.28.1            # downgraded for legacy API compatibility
 requests==2.31.0
 gunicorn==21.2.0
-crewai==0.140.0
+PyPDF2==3.0.1
+python-docx==0.8.11
+crewai==0.138.0           # ✅ more stable, less Rust
