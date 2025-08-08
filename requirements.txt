@@ -1,8 +1,8 @@
 flask==2.3.3
 flask-mail==0.9.1
 python-dotenv==1.0.0
-crewai==0.140.0 
-openai==1.12.0
+openai>=1.13.3
+crewai==0.152.0  # or latest version
 requests==2.31.0
 gunicorn==21.2.0
 PyPDF2==3.0.1
