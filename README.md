@@ -1,4 +1,4 @@
-fi# AI-Powered Hiring Pipeline (CrewAI Version)
+# AI-Powered Hiring Pipeline (CrewAI Version)
 
 An intelligent hiring system that uses **CrewAI agents** to evaluate candidates through multiple stages with comprehensive analysis and 80% threshold scoring.
 
@@ -13,6 +13,22 @@ This project now uses **CrewAI** - a powerful framework for orchestrating role-p
 3. **Technical Interview Agent** - Conducts technical interviews
 4. **HR Interview Agent** - Assesses cultural fit and professionalism
 5. **Offer Letter Agent** - Generates professional offer letters
+
+## 🔧 **Recent Fixes and Improvements**
+
+### **Fixed Issues:**
+- ✅ **Link Usage Logic**: Fixed the issue where links were marked as used immediately upon access. Now links are only marked as completed after the test/interview is finished.
+- ✅ **CrewAI Agent Integration**: Improved agent configuration and result parsing with proper error handling.
+- ✅ **Fallback Mode**: Added comprehensive fallback functionality when CrewAI is not available.
+- ✅ **Flow Continuity**: Ensured proper flow through all stages (coding test → technical interview → HR interview → offer letter).
+- ✅ **Error Handling**: Enhanced error handling for all CrewAI operations with graceful fallbacks.
+
+### **Key Improvements:**
+- **Robust Agent System**: Each agent now has proper error handling and fallback mechanisms
+- **Better Result Parsing**: Improved JSON parsing for CrewAI results with multiple fallback strategies
+- **Enhanced User Experience**: Users can now retake tests if they fail, and completed tests show results
+- **Comprehensive Logging**: Added detailed logging for debugging and monitoring
+- **Email Integration**: Improved email sending with proper error handling
 
 ## Features
 
@@ -33,68 +49,32 @@ This project now uses **CrewAI** - a powerful framework for orchestrating role-p
 - Detailed feedback with scores
 - HTML-based offer letter generation for successful candidates
 
-### 🔒 Single-Use Test Links
-- Each test link can only be accessed once
-- Prevents multiple attempts and ensures test integrity
-- Automatic tracking of link usage with timestamps
-- Graceful error handling for expired or used links
+### 🔒 Improved Link Management
+- Links are only marked as completed after test/interview submission
+- Users can retake tests if they fail
+- Completed tests show results instead of error messages
+- Automatic tracking of completion status with timestamps
 
 ## Process Flow
 
 1. **Application Form** → CrewAI Resume Screening Agent
-2. **Coding Test** → CrewAI Coding Assessment Agent
-3. **Technical Interview** → CrewAI Technical Interview Agent
-4. **HR Interview** → CrewAI HR Interview Agent
-5. **Offer Letter** → CrewAI Offer Letter Agent
+2. **Coding Test** → CrewAI Coding Assessment Agent (80% threshold)
+3. **Technical Interview** → CrewAI Technical Interview Agent (80% threshold)
+4. **HR Interview** → CrewAI HR Interview Agent (80% threshold)
+5. **Offer Letter** → CrewAI Offer Letter Agent (automatic generation)
 
-## Evaluation Criteria
+### **Stage Progression:**
+- Each stage requires 80% or higher to proceed to the next
+- Failed candidates receive detailed feedback
+- Successful candidates automatically receive the next stage link
+- All results are stored and can be viewed later
 
-### Coding Assessment (80% threshold)
-- Correctness (problem solving)
-- Code Quality (structure, readability)
-- Efficiency (time/space complexity)
-- Edge Case Handling
-- Documentation
-
-### Technical Interview (80% threshold)
-- Accuracy of technical information
-- Completeness of answers
-- Depth of knowledge
-- Clarity of explanation
-- Practical application
-
-### HR Interview (80% threshold)
-- Relevance to question
-- Professionalism
-- Clarity of communication
-- Honesty and authenticity
-- Cultural fit
-
-## Security Features
-
-### Single-Use Link Implementation
-The system implements a robust single-use link mechanism to ensure test integrity:
-
-- **Usage Tracking**: Each candidate state includes boolean flags for each test type (`coding_test_used`, `tech_interview_used`, `hr_interview_used`)
-- **Timestamp Recording**: When a link is first accessed, the system records the exact timestamp
-- **Legacy Support**: Existing candidates without usage tracking are automatically upgraded
-- **Error Handling**: Clear error messages for expired, invalid, or already-used links
-- **Debug Endpoint**: `/debug/states` provides visibility into link usage status
-
-**How it works:**
-1. When a candidate accesses a test link, the system checks if it's been used before
-2. If unused, the link is marked as used and the test proceeds
-3. If already used, an error page is shown with appropriate messaging
-4. All usage is persisted to the candidate states file for reliability
-
-## CrewAI Architecture
-
-### Agent Roles and Responsibilities:
+## CrewAI Agent Details
 
 **Resume Screening Agent:**
 - Analyzes candidate resumes and skills
 - Determines initial fit for the position
-- Provides detailed reasoning for decisions
+- Provides screening recommendations
 
 **Coding Assessment Agent:**
 - Generates unique coding questions
@@ -188,6 +168,8 @@ python crewai_app.py
 - **Scalable Architecture**: Easy to add new agents or modify existing ones
 - **Enhanced Feedback**: More detailed and contextual feedback from specialized agents
 - **Consistent Quality**: Standardized evaluation across all candidates
+- **Robust Error Handling**: Comprehensive fallback mechanisms for reliability
+- **Improved User Experience**: Better flow and feedback throughout the process
 
 ## Technology Stack
 
@@ -219,8 +201,13 @@ ai_hiring_pipeline/
 │   ├── tech_interview.html
 │   ├── tech_result.html
 │   ├── hr_interview.html
-│   └── hr_result.html
-└── utils/                # Utility modules
+│   ├── hr_result.html
+│   └── error.html
+├── static/               # Static files
+│   ├── css/
+│   ├── js/
+│   └── uploads/
+└── utils/               # Utility modules
     ├── resume_parser.py
     ├── email_utils.py
     └── judge0_utils.py
@@ -228,30 +215,25 @@ ai_hiring_pipeline/
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues:
 
-1. **CrewAI import errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`
-2. **Email not sending**: Check your email credentials and enable "Less secure app access" or use app passwords
-3. **OpenAI API errors**: Verify your API key and ensure you have sufficient credits
-4. **Port issues**: The app automatically uses the PORT environment variable set by Render
-5. **Build failures**: Ensure all dependencies are listed in requirements.txt
-6. **Agent errors**: Check that your OpenAI API key has access to GPT-4 models
+1. **CrewAI Import Errors**: The system includes fallback mechanisms when CrewAI is not available
+2. **Email Sending Issues**: Check your email credentials and SMTP settings
+3. **OpenAI API Errors**: Ensure your API key is valid and has sufficient credits
+4. **Link Access Issues**: Links are now properly managed and only marked as completed after submission
 
-### Support
+### Debug Mode:
 
-For deployment issues, check the platform-specific documentation:
-- [Render Documentation](https://render.com/docs)
-- [Heroku Documentation](https://devcenter.heroku.com/)
-- [Railway Documentation](https://docs.railway.app/)
-- [CrewAI Documentation](https://docs.crewai.com/)
+Access `/debug/states` to view current candidate states and debug information.
 
-## Migration from Original Version
+## Contributing
 
-If you're upgrading from the original Flask version:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-1. **Install new dependencies**: `pip install -r requirements.txt`
-2. **Update your deployment**: Change start command to `gunicorn crewai_app:app`
-3. **Test the new implementation**: The CrewAI version maintains all existing functionality
-4. **Monitor performance**: CrewAI agents may take slightly longer but provide better results
+## License
 
-The CrewAI implementation maintains 100% compatibility with existing data and templates while providing enhanced AI capabilities through specialized agents. 
+This project is licensed under the MIT License - see the LICENSE file for details. 
