@@ -10,3 +10,4 @@ python-docx==0.8.11
 langchain==0.0.332
 langchain_community==0.0.17
 langchain-core==0.1.23
+langchain_openai>=0.1.0
