@@ -12,4 +12,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 # Change the entrypoint below if your main Flask app is not in main.py
-CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "crewai_app:app", "--bind", "0.0.0.0:8000"]
