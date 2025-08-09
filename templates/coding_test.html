@@ -376,7 +376,7 @@
             }, 2000);
         });
 
-        // Form submission with integrity check
+        // Form submission with integrity check and loading state
         document.querySelector('form').addEventListener('submit', function(e) {
             if (testTerminated) {
                 e.preventDefault();
@@ -390,6 +390,20 @@
                     return;
                 }
             }
+            
+            // Show loading state
+            const submitBtn = document.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing...';
+            
+            // Re-enable if form submission fails
+            setTimeout(() => {
+                if (submitBtn.disabled) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            }, 30000); // 30 second timeout
         });
     </script>
 </body>

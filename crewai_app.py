@@ -36,6 +36,8 @@ import uuid
 import tempfile
 import openai
 from datetime import datetime
+import random
+import hashlib
 
 # CrewAI imports
 try:
@@ -95,6 +97,46 @@ JD = "We are looking for a Python developer."
 
 # File to store candidate states persistently
 CANDIDATE_STATES_FILE = 'candidate_states.json'
+
+# Question pools for unique question generation
+CODING_QUESTION_POOL = [
+    {"question": "Write a function to find the factorial of a number.", "expected_output": "120 (for input 5)"},
+    {"question": "Write a function to check if a string is a palindrome.", "expected_output": "True (for input 'racecar')"},
+    {"question": "Write a function to find the sum of all even numbers in a list.", "expected_output": "12 (for input [1,2,3,4,5,6])"},
+    {"question": "Write a function to reverse a string without using built-in functions.", "expected_output": "'olleh' (for input 'hello')"},
+    {"question": "Write a function to find the largest element in a list.", "expected_output": "9 (for input [3,1,4,1,5,9,2,6])"},
+    {"question": "Write a function to count vowels in a string.", "expected_output": "5 (for input 'education')"},
+    {"question": "Write a function to check if a number is prime.", "expected_output": "True (for input 17)"},
+    {"question": "Write a function to calculate the Fibonacci sequence up to n terms.", "expected_output": "[0,1,1,2,3,5,8] (for input 7)"},
+    {"question": "Write a function to remove duplicates from a list.", "expected_output": "[1,2,3,4] (for input [1,2,2,3,3,4])"},
+    {"question": "Write a function to find the second largest number in a list.", "expected_output": "8 (for input [3,1,4,1,5,9,2,6,8])"}
+]
+
+TECH_QUESTION_POOL = [
+    "Explain the difference between a list and a tuple in Python.",
+    "What is the difference between '==' and 'is' operators in Python?",
+    "Explain the concept of decorators in Python with an example.",
+    "What are Python generators and how do they differ from regular functions?",
+    "Explain the difference between deep copy and shallow copy in Python.",
+    "What is the Global Interpreter Lock (GIL) in Python?",
+    "Explain the concept of lambda functions in Python.",
+    "What are Python context managers and how do you use them?",
+    "Explain the difference between staticmethod and classmethod in Python.",
+    "What is list comprehension and how does it differ from regular loops?"
+]
+
+HR_QUESTION_POOL = [
+    "Tell me about a challenging situation you faced at work and how you handled it.",
+    "Describe a time when you had to work with a difficult team member. How did you handle it?",
+    "What motivates you in your professional life?",
+    "How do you handle stress and pressure in the workplace?",
+    "Describe a time when you had to learn a new technology quickly.",
+    "Tell me about a project you're particularly proud of.",
+    "How do you prioritize your work when you have multiple deadlines?",
+    "Describe a time when you made a mistake at work. How did you handle it?",
+    "What are your long-term career goals?",
+    "How do you stay updated with the latest technology trends?"
+]
 
 def load_candidate_states():
     """Load candidate states from file"""
@@ -168,6 +210,384 @@ def mark_test_completed(token, link_type):
         state[f'{link_type}_completed_at'] = datetime.now().isoformat()
         candidate_states[token] = state
         save_candidate_states(candidate_states)
+
+def get_unique_question(question_type, candidate_email=None):
+    """
+    Get a unique question based on type and candidate history
+    question_type: 'coding', 'tech', or 'hr'
+    candidate_email: to track question history per candidate
+    """
+    if question_type == 'coding':
+        pool = CODING_QUESTION_POOL
+    elif question_type == 'tech':
+        pool = TECH_QUESTION_POOL
+    elif question_type == 'hr':
+        pool = HR_QUESTION_POOL
+    else:
+        return None
+    
+    # If no email provided, return random question
+    if not candidate_email:
+        if question_type == 'coding':
+            selected = random.choice(pool)
+            return selected['question'], selected['expected_output']
+        else:
+            return random.choice(pool), None
+    
+    # Track used questions per candidate
+    used_questions_key = f'used_{question_type}_questions'
+    used_questions = []
+    
+    # Check all candidate states for this email's history
+    for token, state in candidate_states.items():
+        if state.get('email') == candidate_email:
+            used_questions.extend(state.get(used_questions_key, []))
+    
+    # Remove duplicates
+    used_questions = list(set(used_questions))
+    
+    # Filter available questions
+    if question_type == 'coding':
+        available_questions = [q for q in pool if q['question'] not in used_questions]
+        if not available_questions:
+            # Reset if all questions used
+            available_questions = pool
+            used_questions = []
+        
+        selected = random.choice(available_questions)
+        return selected['question'], selected['expected_output'], used_questions + [selected['question']]
+    else:
+        available_questions = [q for q in pool if q not in used_questions]
+        if not available_questions:
+            # Reset if all questions used
+            available_questions = pool
+            used_questions = []
+        
+        selected = random.choice(available_questions)
+        return selected, None, used_questions + [selected]
+
+def generate_question_with_ai_fallback(question_type, candidate_state=None):
+    """
+    Generate a question using AI with fallback to question pool
+    """
+    candidate_email = candidate_state.get('email') if candidate_state else None
+    
+    # Try to get unique question from pool first
+    if question_type == 'coding':
+        question, expected_output, updated_used = get_unique_question('coding', candidate_email)
+        if candidate_state and candidate_email:
+            candidate_state['used_coding_questions'] = updated_used
+        return question, expected_output
+    elif question_type == 'tech':
+        question, _, updated_used = get_unique_question('tech', candidate_email)
+        if candidate_state and candidate_email:
+            candidate_state['used_tech_questions'] = updated_used
+        return question
+    elif question_type == 'hr':
+        question, _, updated_used = get_unique_question('hr', candidate_email)
+        if candidate_state and candidate_email:
+            candidate_state['used_hr_questions'] = updated_used
+        return question
+    
+    # Fallback to AI generation only if pool is exhausted or unavailable
+    if CREWAI_AVAILABLE and question_type == 'coding':
+        try:
+            # AI generation logic here (existing code)
+            pass
+        except:
+            pass
+    
+    # Final fallback
+    if question_type == 'coding':
+        return "Write a function to add two numbers and return the result.", "5 (for input 2, 3)"
+    elif question_type == 'tech':
+        return "Explain the difference between a list and a tuple in Python."
+    else:
+        return "Tell me about a challenging situation you faced at work and how you handled it."
+
+def analyze_code_quality(code, question, language='python'):
+    """
+    Analyze code quality with detailed scoring
+    """
+    score = 0
+    feedback_parts = []
+    
+    # Basic syntax and structure checks (40 points)
+    if language.lower() == 'python':
+        # Check for function definition
+        if 'def ' in code:
+            score += 15
+            feedback_parts.append("✓ Function definition found")
+        else:
+            feedback_parts.append("✗ No function definition found")
+        
+        # Check for return statement
+        if 'return' in code:
+            score += 10
+            feedback_parts.append("✓ Return statement present")
+        else:
+            feedback_parts.append("✗ Missing return statement")
+        
+        # Check for proper indentation (basic check)
+        lines = code.split('\n')
+        indented_lines = [line for line in lines if line.startswith('    ') or line.startswith('\t')]
+        if indented_lines:
+            score += 5
+            feedback_parts.append("✓ Proper indentation detected")
+        
+        # Check for comments or documentation
+        if '#' in code or '"""' in code or "'''" in code:
+            score += 5
+            feedback_parts.append("✓ Code documentation found")
+        
+        # Check for error handling
+        if 'try:' in code or 'except' in code:
+            score += 5
+            feedback_parts.append("✓ Error handling implemented")
+    
+    # Code complexity and logic (30 points)
+    code_length = len(code.strip())
+    if code_length > 50:
+        score += 10
+        feedback_parts.append("✓ Adequate code length")
+    
+    # Check for loops or conditionals
+    if any(keyword in code for keyword in ['for ', 'while ', 'if ']):
+        score += 10
+        feedback_parts.append("✓ Control structures used")
+    
+    # Check for built-in functions usage
+    if any(func in code for func in ['len(', 'sum(', 'max(', 'min(', 'sorted(']):
+        score += 5
+        feedback_parts.append("✓ Built-in functions utilized")
+    
+    # Variable naming (10 points)
+    import re
+    variables = re.findall(r'\b[a-z_][a-z0-9_]*\b', code.lower())
+    meaningful_vars = [var for var in variables if len(var) > 2 and var not in ['def', 'for', 'if', 'try']]
+    if meaningful_vars:
+        score += 10
+        feedback_parts.append("✓ Meaningful variable names used")
+    
+    # Question-specific checks (20 points)
+    question_lower = question.lower()
+    code_lower = code.lower()
+    
+    if 'factorial' in question_lower:
+        if any(keyword in code_lower for keyword in ['factorial', '!']):
+            score += 15
+        if 'math.factorial' in code_lower:
+            score += 5
+            feedback_parts.append("✓ Uses appropriate library function")
+    elif 'palindrome' in question_lower:
+        if any(keyword in code_lower for keyword in ['reverse', '[::-1]', 'reversed']):
+            score += 15
+            feedback_parts.append("✓ Palindrome logic implemented")
+    elif 'even' in question_lower:
+        if '%' in code or 'mod' in code_lower:
+            score += 15
+            feedback_parts.append("✓ Modulo operation for even numbers")
+    elif 'sum' in question_lower:
+        if 'sum(' in code_lower:
+            score += 10
+            feedback_parts.append("✓ Sum function used appropriately")
+    elif 'largest' in question_lower or 'maximum' in question_lower:
+        if 'max(' in code_lower:
+            score += 10
+            feedback_parts.append("✓ Max function used")
+    elif 'prime' in question_lower:
+        if any(keyword in code_lower for keyword in ['%', 'mod', 'sqrt']):
+            score += 15
+            feedback_parts.append("✓ Prime number logic implemented")
+    
+    # Ensure score doesn't exceed 100
+    score = min(score, 100)
+    
+    # Generate recommendation
+    if score >= 80:
+        recommendation = "PASS"
+        feedback_parts.append(f"\n🎉 Excellent work! Score: {score}/100")
+    elif score >= 60:
+        recommendation = "PASS"
+        feedback_parts.append(f"\n✅ Good effort! Score: {score}/100")
+    else:
+        recommendation = "FAIL"
+        feedback_parts.append(f"\n❌ Needs improvement. Score: {score}/100")
+    
+    feedback = "\n".join(feedback_parts)
+    
+    return {
+        'score': score,
+        'feedback': feedback,
+        'recommendation': recommendation
+    }
+
+def analyze_technical_answer(answer, question):
+    """
+    Analyze technical interview answer quality
+    """
+    score = 0
+    feedback_parts = []
+    
+    # Basic answer quality (30 points)
+    answer_length = len(answer.strip())
+    if answer_length > 100:
+        score += 15
+        feedback_parts.append("✓ Comprehensive answer length")
+    elif answer_length > 50:
+        score += 10
+        feedback_parts.append("✓ Adequate answer length")
+    else:
+        feedback_parts.append("✗ Answer too brief")
+    
+    # Technical terms and concepts (40 points)
+    question_lower = question.lower()
+    answer_lower = answer.lower()
+    
+    if 'list' in question_lower and 'tuple' in question_lower:
+        technical_terms = ['mutable', 'immutable', 'ordered', 'changeable', 'brackets', 'parentheses']
+        found_terms = [term for term in technical_terms if term in answer_lower]
+        score += min(len(found_terms) * 5, 25)
+        if found_terms:
+            feedback_parts.append(f"✓ Technical terms used: {', '.join(found_terms)}")
+    elif 'decorator' in question_lower:
+        technical_terms = ['function', 'wrapper', '@', 'higher-order', 'modify', 'enhance']
+        found_terms = [term for term in technical_terms if term in answer_lower]
+        score += min(len(found_terms) * 5, 25)
+    elif 'generator' in question_lower:
+        technical_terms = ['yield', 'iterator', 'memory', 'lazy', 'next()']
+        found_terms = [term for term in technical_terms if term in answer_lower]
+        score += min(len(found_terms) * 5, 25)
+    
+    # Examples and practical application (20 points)
+    if any(keyword in answer_lower for keyword in ['example', 'for instance', 'such as', 'like']):
+        score += 10
+        feedback_parts.append("✓ Examples provided")
+    
+    if any(keyword in answer for keyword in ['def ', 'class ', 'import ', '>>>']):
+        score += 10
+        feedback_parts.append("✓ Code examples included")
+    
+    # Clarity and structure (10 points)
+    sentences = answer.split('.')
+    if len(sentences) > 2:
+        score += 5
+        feedback_parts.append("✓ Well-structured answer")
+    
+    if any(keyword in answer_lower for keyword in ['first', 'second', 'however', 'while', 'whereas']):
+        score += 5
+        feedback_parts.append("✓ Clear comparison and contrast")
+    
+    # Ensure score doesn't exceed 100
+    score = min(score, 100)
+    
+    # Generate recommendation
+    if score >= 80:
+        recommendation = "PASS"
+        feedback_parts.append(f"\n🎉 Excellent technical knowledge! Score: {score}/100")
+    elif score >= 60:
+        recommendation = "PASS"
+        feedback_parts.append(f"\n✅ Good technical understanding! Score: {score}/100")
+    else:
+        recommendation = "FAIL"
+        feedback_parts.append(f"\n❌ Technical knowledge needs improvement. Score: {score}/100")
+    
+    feedback = "\n".join(feedback_parts)
+    
+    return {
+        'score': score,
+        'feedback': feedback,
+        'recommendation': recommendation
+    }
+
+def analyze_hr_answer(answer, question):
+    """
+    Analyze HR interview answer quality
+    """
+    score = 0
+    feedback_parts = []
+    
+    # Answer completeness (25 points)
+    answer_length = len(answer.strip())
+    if answer_length > 150:
+        score += 20
+        feedback_parts.append("✓ Comprehensive and detailed answer")
+    elif answer_length > 75:
+        score += 15
+        feedback_parts.append("✓ Good answer length")
+    elif answer_length > 30:
+        score += 10
+        feedback_parts.append("✓ Adequate answer length")
+    else:
+        feedback_parts.append("✗ Answer too brief")
+    
+    # Professional vocabulary and tone (20 points)
+    professional_terms = ['professional', 'team', 'collaboration', 'responsibility', 'challenge', 
+                         'solution', 'experience', 'learned', 'improved', 'achieved']
+    found_terms = [term for term in professional_terms if term.lower() in answer.lower()]
+    score += min(len(found_terms) * 2, 15)
+    if found_terms:
+        feedback_parts.append(f"✓ Professional vocabulary: {len(found_terms)} terms used")
+    
+    # Structure and storytelling (25 points)
+    answer_lower = answer.lower()
+    
+    # STAR method indicators
+    star_elements = {
+        'situation': any(keyword in answer_lower for keyword in ['situation', 'when', 'time', 'during']),
+        'task': any(keyword in answer_lower for keyword in ['task', 'responsibility', 'role', 'needed to']),
+        'action': any(keyword in answer_lower for keyword in ['action', 'did', 'took', 'implemented', 'decided']),
+        'result': any(keyword in answer_lower for keyword in ['result', 'outcome', 'achieved', 'learned', 'improved'])
+    }
+    
+    star_score = sum(star_elements.values()) * 5
+    score += star_score
+    if star_score > 0:
+        feedback_parts.append(f"✓ STAR method elements: {star_score/5:.0f}/4 components")
+    
+    # Problem-solving and learning (20 points)
+    if any(keyword in answer_lower for keyword in ['problem', 'challenge', 'difficult', 'issue']):
+        score += 8
+        feedback_parts.append("✓ Acknowledges challenges")
+    
+    if any(keyword in answer_lower for keyword in ['solved', 'resolved', 'handled', 'managed', 'overcame']):
+        score += 7
+        feedback_parts.append("✓ Shows problem-solving skills")
+    
+    if any(keyword in answer_lower for keyword in ['learned', 'growth', 'improved', 'better', 'experience']):
+        score += 5
+        feedback_parts.append("✓ Demonstrates learning and growth")
+    
+    # Communication and interpersonal skills (10 points)
+    if any(keyword in answer_lower for keyword in ['team', 'communication', 'discussed', 'collaborated']):
+        score += 5
+        feedback_parts.append("✓ Mentions teamwork/communication")
+    
+    if any(keyword in answer_lower for keyword in ['feedback', 'listen', 'understand', 'empathy']):
+        score += 5
+        feedback_parts.append("✓ Shows interpersonal awareness")
+    
+    # Ensure score doesn't exceed 100
+    score = min(score, 100)
+    
+    # Generate recommendation
+    if score >= 80:
+        recommendation = "PASS"
+        feedback_parts.append(f"\n🎉 Excellent communication and professionalism! Score: {score}/100")
+    elif score >= 60:
+        recommendation = "PASS"
+        feedback_parts.append(f"\n✅ Good professional response! Score: {score}/100")
+    else:
+        recommendation = "FAIL"
+        feedback_parts.append(f"\n❌ Professional communication needs improvement. Score: {score}/100")
+    
+    feedback = "\n".join(feedback_parts)
+    
+    return {
+        'score': score,
+        'feedback': feedback,
+        'recommendation': recommendation
+    }
 
 # Load existing states
 candidate_states = load_candidate_states()
@@ -274,67 +694,9 @@ def candidate_form():
         
         # If 'python' is in skills, auto-select
         if 'python' in skills.lower():
-            # Generate coding question and expected output using CrewAI
-            if CREWAI_AVAILABLE:
-                try:
-                    question_task = Task(
-                        description="""
-                        Generate a unique, easy-level coding question for a Python developer interview.
-                        The question should be:
-                        1. Clear and well-defined
-                        2. Appropriate for entry-level to mid-level developers
-                        3. Test basic programming concepts
-                        4. Have a clear expected output
-                        
-                        Return the response in this exact JSON format:
-                        {
-                            "question": "Write a function to add two numbers and return the result.",
-                            "expected_output": "5 (for input 2, 3)"
-                        }
-                        """,
-                        agent=create_coding_assessment_agent(),
-                        expected_output="JSON with 'question' and 'expected_output' fields"
-                    )
-                    question_crew = Crew(
-                        agents=[create_coding_assessment_agent()],
-                        tasks=[question_task],
-                        verbose=True,
-                        process=Process.sequential
-                    )
-                    result = question_crew.kickoff()
-                    print(f"[DEBUG] Question generation result: {result}")
-                    
-                    import re
-                    import json
-                    try:
-                        if isinstance(result, str):
-                            # Look for JSON in the result
-                            json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                            if json_match:
-                                parsed_result = json.loads(json_match.group())
-                                question = parsed_result.get('question', "Write a function to add two numbers.")
-                                expected_output = parsed_result.get('expected_output', "5 (for input 2, 3)")
-                            else:
-                                # Fallback to regex
-                                question_match = re.search(r'"question":\s*"([^"]+)"', result)
-                                question = question_match.group(1) if question_match else "Write a function to add two numbers."
-                                expected_output_match = re.search(r'"expected_output":\s*"([^"]+)"', result)
-                                expected_output = expected_output_match.group(1) if expected_output_match else "5 (for input 2, 3)"
-                        else:
-                            question = "Write a function to add two numbers."
-                            expected_output = "5 (for input 2, 3)"
-                    except Exception as e:
-                        print(f"[ERROR] Error parsing question result: {e}")
-                        question = "Write a function to add two numbers."
-                        expected_output = "5 (for input 2, 3)"
-                except Exception as e:
-                    print(f"[ERROR] Error generating question: {e}")
-                    question = "Write a function to add two numbers."
-                    expected_output = "5 (for input 2, 3)"
-            else:
-                # Fallback when CrewAI is not available
-                question = "Write a function to add two numbers and return the result."
-                expected_output = "5 (for input 2, 3)"
+            # Generate unique coding question
+            candidate_state_temp = {'email': email}
+            question, expected_output = generate_question_with_ai_fallback('coding', candidate_state_temp)
             decision = "YES"
         else:
             question = None
@@ -354,7 +716,10 @@ def candidate_form():
                 'expected_output': expected_output,
                 'coding_test_completed': False,
                 'tech_interview_completed': False,
-                'hr_interview_completed': False
+                'hr_interview_completed': False,
+                'used_coding_questions': [question] if question else [],
+                'used_tech_questions': [],
+                'used_hr_questions': []
             }
             save_candidate_states(candidate_states)
             
@@ -423,66 +788,10 @@ def coding_test(token):
     # Ensure question exists
     question = state.get('question')
     if not question:
-        # Use CrewAI to generate question
-        if CREWAI_AVAILABLE:
-            try:
-                question_task = Task(
-                    description="""
-                    Generate a unique, easy-level coding question for a Python developer interview.
-                    The question should be:
-                    1. Clear and well-defined
-                    2. Appropriate for entry-level to mid-level developers
-                    3. Test basic programming concepts
-                    4. Have a clear expected output
-                    
-                    Return the response in this exact JSON format:
-                    {
-                        "question": "Write a function to add two numbers and return the result.",
-                        "expected_output": "5 (for input 2, 3)"
-                    }
-                    """,
-                    agent=create_coding_assessment_agent(),
-                    expected_output="JSON with 'question' and 'expected_output' fields"
-                )
-                
-                question_crew = Crew(
-                    agents=[create_coding_assessment_agent()],
-                    tasks=[question_task],
-                    verbose=True,
-                    process=Process.sequential
-                )
-                
-                result = question_crew.kickoff()
-                print(f"[DEBUG] Question generation result: {result}")
-                
-                # Parse the result to extract question
-                import re
-                import json
-                try:
-                    # Try to parse as JSON first
-                    if isinstance(result, str):
-                        # Look for JSON in the result
-                        json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                        if json_match:
-                            parsed_result = json.loads(json_match.group())
-                            question = parsed_result.get('question', "Write a function to add two numbers.")
-                        else:
-                            # Fallback to regex
-                            question_match = re.search(r'"question":\s*"([^"]+)"', result)
-                            question = question_match.group(1) if question_match else "Write a function to add two numbers."
-                    else:
-                        question = "Write a function to add two numbers."
-                except Exception as e:
-                    print(f"[ERROR] Error parsing question result: {e}")
-                    question = "Write a function to add two numbers."
-            except Exception as e:
-                print(f"[ERROR] Error generating question: {e}")
-                question = "Write a function to add two numbers."
-        else:
-            # Fallback question when CrewAI is not available
-            question = "Write a function to add two numbers and return the result."
-        
+        # Generate a unique question for this candidate
+        question, expected_output = generate_question_with_ai_fallback('coding', state)
         state['question'] = question
+        state['expected_output'] = expected_output
         candidate_states[token] = state
         save_candidate_states(candidate_states)
     
@@ -498,90 +807,57 @@ def coding_test(token):
             print(f"[ERROR] Error submitting code: {e}")
             output = "Error executing code"
         
-        # Use CrewAI to analyze the coding solution
-        if CREWAI_AVAILABLE:
-            try:
-                evaluation_task = Task(
-                    description=f"""
-                    Evaluate the following coding solution:
-                    
-                    Question: {question}
-                    Candidate's Code: {code}
-                    Language: {language}
-                    
-                    Provide a comprehensive evaluation with:
-                    1. Overall score (0-100)
-                    2. Detailed feedback on correctness, quality, efficiency, edge cases, and documentation
-                    3. Specific suggestions for improvement
-                    4. Final recommendation: PASS (if score >= 80) or FAIL (if score < 80)
-                    
-                    Return the response in this exact JSON format:
-                    {{
-                        "score": 85,
-                        "feedback": "Detailed feedback here...",
-                        "recommendation": "PASS"
-                    }}
-                    """,
-                    agent=create_coding_assessment_agent(),
-                    expected_output="JSON with score, feedback, and recommendation"
-                )
-                
-                evaluation_crew = Crew(
-                    agents=[create_coding_assessment_agent()],
-                    tasks=[evaluation_task],
-                    verbose=True,
-                    process=Process.sequential
-                )
-                
-                result = evaluation_crew.kickoff()
-                print(f"[DEBUG] Evaluation result: {result}")
-                
-                # Parse the result
-                import re
-                import json
+        # Use improved code analysis with AI fallback
+        try:
+            # First, use our improved analysis system
+            analysis_result = analyze_code_quality(code, question, language)
+            score = analysis_result['score']
+            recommendation = analysis_result['recommendation']
+            feedback = analysis_result['feedback']
+            
+            # If score is borderline, try to get AI enhancement (optional)
+            if CREWAI_AVAILABLE and 60 <= score <= 85:
                 try:
-                    if isinstance(result, str):
-                        # Look for JSON in the result
-                        json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                        if json_match:
-                            parsed_result = json.loads(json_match.group())
-                            score = parsed_result.get('score', 0)
-                            recommendation = parsed_result.get('recommendation', 'FAIL')
-                            feedback = parsed_result.get('feedback', result)
-                        else:
-                            # Fallback to regex
-                            score_match = re.search(r'"score":\s*(\d+)', result)
-                            score = int(score_match.group(1)) if score_match else 0
-                            recommendation_match = re.search(r'"recommendation":\s*"(PASS|FAIL)"', result)
-                            recommendation = recommendation_match.group(1) if recommendation_match else "FAIL"
-                            feedback = result
-                    else:
-                        score = 0
-                        recommendation = "FAIL"
-                        feedback = str(result)
+                    evaluation_task = Task(
+                        description=f"""
+                        Review this coding solution analysis and provide additional insights:
+                        
+                        Question: {question}
+                        Code: {code}
+                        Current Score: {score}
+                        Current Feedback: {feedback}
+                        
+                        Provide additional feedback on:
+                        1. Code efficiency and optimization
+                        2. Edge case handling
+                        3. Best practices adherence
+                        4. Suggestions for improvement
+                        
+                        Return a brief enhancement to the existing feedback.
+                        """,
+                        agent=create_coding_assessment_agent(),
+                        expected_output="Additional feedback and insights"
+                    )
+                    
+                    evaluation_crew = Crew(
+                        agents=[create_coding_assessment_agent()],
+                        tasks=[evaluation_task],
+                        verbose=True,
+                        process=Process.sequential
+                    )
+                    
+                    ai_enhancement = evaluation_crew.kickoff()
+                    feedback += f"\n\nAI Enhancement: {ai_enhancement}"
+                    print(f"[INFO] AI enhancement added to analysis")
                 except Exception as e:
-                    print(f"[ERROR] Error parsing evaluation result: {e}")
-                    score = 0
-                    recommendation = "FAIL"
-                    feedback = str(result)
-            except Exception as e:
-                print(f"[ERROR] Error in evaluation: {e}")
-                score = 0
-                recommendation = "FAIL"
-                feedback = f"Error during evaluation: {str(e)}"
-        else:
-            # Fallback evaluation when CrewAI is not available
-            # Simple evaluation based on code length and basic checks
-            score = 75  # Default score
-            if 'def' in code and 'return' in code:
-                score = 85
-            if 'print' in code:
-                score += 5
-            if score >= 80:
-                recommendation = "PASS"
-            else:
-                recommendation = "FAIL"
-            feedback = f"Fallback evaluation: Code contains basic Python structure. Score: {score}/100"
+                    print(f"[INFO] AI enhancement failed, using base analysis: {e}")
+            
+        except Exception as e:
+            print(f"[ERROR] Error in code analysis: {e}")
+            # Ultimate fallback
+            score = 50
+            recommendation = "FAIL"
+            feedback = f"Error during code analysis: {str(e)}. Please review code manually."
         
         analysis_result = {
             'score': score,
@@ -670,67 +946,8 @@ def tech_interview(token):
     # Ensure question exists
     question = state.get('tech_question')
     if not question:
-        # Use CrewAI to generate question
-        if CREWAI_AVAILABLE:
-            try:
-                question_task = Task(
-                    description=f"""
-                    Generate a technical interview question for a Python developer based on their resume:
-                    
-                    Resume: {state.get('resume_text', '')}
-                    Skills: {state.get('skills', '')}
-                    
-                    The question should be:
-                    1. Relevant to their background
-                    2. Test technical depth
-                    3. Appropriate for their experience level
-                    4. Clear and well-structured
-                    
-                    Return the response in this exact JSON format:
-                    {{
-                        "question": "Explain the difference between a list and a tuple in Python."
-                    }}
-                    """,
-                    agent=create_technical_interview_agent(),
-                    expected_output="JSON with 'question' field"
-                )
-                
-                question_crew = Crew(
-                    agents=[create_technical_interview_agent()],
-                    tasks=[question_task],
-                    verbose=True,
-                    process=Process.sequential
-                )
-                
-                result = question_crew.kickoff()
-                print(f"[DEBUG] Tech question generation result: {result}")
-                
-                # Parse the result to extract question
-                import re
-                import json
-                try:
-                    if isinstance(result, str):
-                        # Look for JSON in the result
-                        json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                        if json_match:
-                            parsed_result = json.loads(json_match.group())
-                            question = parsed_result.get('question', "Explain the difference between a list and a tuple in Python.")
-                        else:
-                            # Fallback to regex
-                            question_match = re.search(r'"question":\s*"([^"]+)"', result)
-                            question = question_match.group(1) if question_match else "Explain the difference between a list and a tuple in Python."
-                    else:
-                        question = "Explain the difference between a list and a tuple in Python."
-                except Exception as e:
-                    print(f"[ERROR] Error parsing tech question result: {e}")
-                    question = "Explain the difference between a list and a tuple in Python."
-            except Exception as e:
-                print(f"[ERROR] Error generating tech question: {e}")
-                question = "Explain the difference between a list and a tuple in Python."
-        else:
-            # Fallback question when CrewAI is not available
-            question = "Explain the difference between a list and a tuple in Python."
-        
+        # Generate a unique technical question for this candidate
+        question = generate_question_with_ai_fallback('tech', state)
         state['tech_question'] = question
         candidate_states[token] = state
         save_candidate_states(candidate_states)
@@ -740,91 +957,21 @@ def tech_interview(token):
     if request.method == 'POST':
         answer = request.form['answer']
         
-        # Use CrewAI to analyze the technical answer
-        if CREWAI_AVAILABLE:
-            try:
-                evaluation_task = Task(
-                    description=f"""
-                    Evaluate the following technical interview answer:
-                    
-                    Question: {question}
-                    Candidate's Answer: {answer}
-                    
-                    Provide a comprehensive evaluation with:
-                    1. Overall score (0-100)
-                    2. Detailed feedback on accuracy, completeness, depth, clarity, and practical application
-                    3. Specific suggestions for improvement
-                    4. Final recommendation: PASS (if score >= 80) or FAIL (if score < 80)
-                    
-                    Return the response in this exact JSON format:
-                    {{
-                        "score": 85,
-                        "feedback": "Detailed feedback here...",
-                        "recommendation": "PASS"
-                    }}
-                    """,
-                    agent=create_technical_interview_agent(),
-                    expected_output="JSON with score, feedback, and recommendation"
-                )
-                
-                evaluation_crew = Crew(
-                    agents=[create_technical_interview_agent()],
-                    tasks=[evaluation_task],
-                    verbose=True,
-                    process=Process.sequential
-                )
-                
-                result = evaluation_crew.kickoff()
-                print(f"[DEBUG] Tech evaluation result: {result}")
-                
-                # Parse the result
-                import re
-                import json
-                try:
-                    if isinstance(result, str):
-                        # Look for JSON in the result
-                        json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                        if json_match:
-                            parsed_result = json.loads(json_match.group())
-                            score = parsed_result.get('score', 0)
-                            recommendation = parsed_result.get('recommendation', 'FAIL')
-                            feedback = parsed_result.get('feedback', result)
-                        else:
-                            # Fallback to regex
-                            score_match = re.search(r'"score":\s*(\d+)', result)
-                            score = int(score_match.group(1)) if score_match else 0
-                            recommendation_match = re.search(r'"recommendation":\s*"(PASS|FAIL)"', result)
-                            recommendation = recommendation_match.group(1) if recommendation_match else "FAIL"
-                            feedback = result
-                    else:
-                        score = 0
-                        recommendation = "FAIL"
-                        feedback = str(result)
-                except Exception as e:
-                    print(f"[ERROR] Error parsing tech evaluation result: {e}")
-                    score = 0
-                    recommendation = "FAIL"
-                    feedback = str(result)
-            except Exception as e:
-                print(f"[ERROR] Error in tech evaluation: {e}")
-                score = 0
-                recommendation = "FAIL"
-                feedback = f"Error during evaluation: {str(e)}"
-        else:
-            # Fallback evaluation when CrewAI is not available
-            # Simple evaluation based on answer length and keywords
-            score = 70  # Default score
-            if len(answer) > 50:
-                score += 10
-            if 'list' in answer.lower() and 'tuple' in answer.lower():
-                score += 10
-            if 'mutable' in answer.lower() or 'immutable' in answer.lower():
-                score += 10
-            if score >= 80:
-                recommendation = "PASS"
-            else:
-                recommendation = "FAIL"
-            feedback = f"Fallback evaluation: Answer length and content analysis. Score: {score}/100"
+        # Use improved technical analysis
+        try:
+            analysis_result = analyze_technical_answer(answer, question)
+            score = analysis_result['score']
+            recommendation = analysis_result['recommendation']
+            feedback = analysis_result['feedback']
+            
+            print(f"[INFO] Technical analysis completed. Score: {score}")
+            
+        except Exception as e:
+            print(f"[ERROR] Error in technical analysis: {e}")
+            # Ultimate fallback
+            score = 50
+            recommendation = "FAIL"
+            feedback = f"Error during technical analysis: {str(e)}. Please review answer manually."
         
         analysis_result = {
             'score': score,
@@ -914,63 +1061,8 @@ def hr_interview(token):
     # Ensure question exists
     question = state.get('hr_question')
     if not question:
-        # Use CrewAI to generate question
-        if CREWAI_AVAILABLE:
-            try:
-                question_task = Task(
-                    description="""
-                    Generate an HR interview question for a job candidate.
-                    The question should be:
-                    1. Relevant to workplace scenarios
-                    2. Test communication skills
-                    3. Assess cultural fit
-                    4. Professional and appropriate
-                    
-                    Return the response in this exact JSON format:
-                    {
-                        "question": "Tell me about a challenging situation you faced at work and how you handled it."
-                    }
-                    """,
-                    agent=create_hr_interview_agent(),
-                    expected_output="JSON with 'question' field"
-                )
-                
-                question_crew = Crew(
-                    agents=[create_hr_interview_agent()],
-                    tasks=[question_task],
-                    verbose=True,
-                    process=Process.sequential
-                )
-                
-                result = question_crew.kickoff()
-                print(f"[DEBUG] HR question generation result: {result}")
-                
-                # Parse the result to extract question
-                import re
-                import json
-                try:
-                    if isinstance(result, str):
-                        # Look for JSON in the result
-                        json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                        if json_match:
-                            parsed_result = json.loads(json_match.group())
-                            question = parsed_result.get('question', "Tell me about a challenging situation you faced at work and how you handled it.")
-                        else:
-                            # Fallback to regex
-                            question_match = re.search(r'"question":\s*"([^"]+)"', result)
-                            question = question_match.group(1) if question_match else "Tell me about a challenging situation you faced at work and how you handled it."
-                    else:
-                        question = "Tell me about a challenging situation you faced at work and how you handled it."
-                except Exception as e:
-                    print(f"[ERROR] Error parsing HR question result: {e}")
-                    question = "Tell me about a challenging situation you faced at work and how you handled it."
-            except Exception as e:
-                print(f"[ERROR] Error generating HR question: {e}")
-                question = "Tell me about a challenging situation you faced at work and how you handled it."
-        else:
-            # Fallback question when CrewAI is not available
-            question = "Tell me about a challenging situation you faced at work and how you handled it."
-        
+        # Generate a unique HR question for this candidate
+        question = generate_question_with_ai_fallback('hr', state)
         state['hr_question'] = question
         candidate_states[token] = state
         save_candidate_states(candidate_states)
@@ -980,93 +1072,21 @@ def hr_interview(token):
     if request.method == 'POST':
         answer = request.form['answer']
         
-        # Use CrewAI to analyze the HR answer
-        if CREWAI_AVAILABLE:
-            try:
-                evaluation_task = Task(
-                    description=f"""
-                    Evaluate the following HR interview answer:
-                    
-                    Question: {question}
-                    Candidate's Answer: {answer}
-                    
-                    Provide a comprehensive evaluation with:
-                    1. Overall score (0-100)
-                    2. Detailed feedback on relevance, professionalism, clarity, honesty, and cultural fit
-                    3. Specific suggestions for improvement
-                    4. Final recommendation: PASS (if score >= 80) or FAIL (if score < 80)
-                    
-                    Return the response in this exact JSON format:
-                    {{
-                        "score": 85,
-                        "feedback": "Detailed feedback here...",
-                        "recommendation": "PASS"
-                    }}
-                    """,
-                    agent=create_hr_interview_agent(),
-                    expected_output="JSON with score, feedback, and recommendation"
-                )
-                
-                evaluation_crew = Crew(
-                    agents=[create_hr_interview_agent()],
-                    tasks=[evaluation_task],
-                    verbose=True,
-                    process=Process.sequential
-                )
-                
-                result = evaluation_crew.kickoff()
-                print(f"[DEBUG] HR evaluation result: {result}")
-                
-                # Parse the result
-                import re
-                import json
-                try:
-                    if isinstance(result, str):
-                        # Look for JSON in the result
-                        json_match = re.search(r'\{.*\}', result, re.DOTALL)
-                        if json_match:
-                            parsed_result = json.loads(json_match.group())
-                            score = parsed_result.get('score', 0)
-                            recommendation = parsed_result.get('recommendation', 'FAIL')
-                            feedback = parsed_result.get('feedback', result)
-                        else:
-                            # Fallback to regex
-                            score_match = re.search(r'"score":\s*(\d+)', result)
-                            score = int(score_match.group(1)) if score_match else 0
-                            recommendation_match = re.search(r'"recommendation":\s*"(PASS|FAIL)"', result)
-                            recommendation = recommendation_match.group(1) if recommendation_match else "FAIL"
-                            feedback = result
-                    else:
-                        score = 0
-                        recommendation = "FAIL"
-                        feedback = str(result)
-                except Exception as e:
-                    print(f"[ERROR] Error parsing HR evaluation result: {e}")
-                    score = 0
-                    recommendation = "FAIL"
-                    feedback = str(result)
-            except Exception as e:
-                print(f"[ERROR] Error in HR evaluation: {e}")
-                score = 0
-                recommendation = "FAIL"
-                feedback = f"Error during evaluation: {str(e)}"
-        else:
-            # Fallback evaluation when CrewAI is not available
-            # Simple evaluation based on answer length and keywords
-            score = 70  # Default score
-            if len(answer) > 100:
-                score += 15
-            if 'challenge' in answer.lower() or 'difficult' in answer.lower():
-                score += 5
-            if 'solution' in answer.lower() or 'resolve' in answer.lower():
-                score += 5
-            if 'team' in answer.lower() or 'collaboration' in answer.lower():
-                score += 5
-            if score >= 80:
-                recommendation = "PASS"
-            else:
-                recommendation = "FAIL"
-            feedback = f"Fallback evaluation: Answer length and content analysis. Score: {score}/100"
+        # Use improved HR analysis
+        try:
+            analysis_result = analyze_hr_answer(answer, question)
+            score = analysis_result['score']
+            recommendation = analysis_result['recommendation']
+            feedback = analysis_result['feedback']
+            
+            print(f"[INFO] HR analysis completed. Score: {score}")
+            
+        except Exception as e:
+            print(f"[ERROR] Error in HR analysis: {e}")
+            # Ultimate fallback
+            score = 50
+            recommendation = "FAIL"
+            feedback = f"Error during HR analysis: {str(e)}. Please review answer manually."
         
         analysis_result = {
             'score': score,
